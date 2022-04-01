@@ -1,0 +1,70 @@
+{% set pathbrowse = false %}
+{% set multiselect = 1 %}
+{% set multiselectFilesOnly = true %}
+
+{% extends "flm::dialog-window.twig" %}
+{% block heading %}
+    <legend>{{ theUILang.fDiagSFVCreateSel }}</legend>
+{% endblock %}
+
+{% block content %}
+    {{ window.pathBrowser(selectedTarget, theUILang.fDiagTo) }}
+
+{#  <legend> {{ theUILang.fDiagCArchType }} </legend>#}
+{#    <label style="float: left;">#}
+{#        <select name="fman-checksum-type"  class="fman-checksum-type">#}
+{#            <option value="sfv">sfv</option>#}
+{#        </select>#}
+{#    </label>#}
+
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        (function (global) {
+            var dialogs = flm.ui.getDialogs();
+            var diagId = dialogs.getDialogId('window');
+            var ext = 'sfv';
+
+            dialogs.onStart(function () {
+                var checksumFile = $.trim(dialogs.getTargetPath(diagId));
+                var filePaths = dialogs.getCheckedList(diagId);
+                var hasError;
+
+                if (!checksumFile.length) {
+                    hasError = theUILang.fDiagSFVempty;
+                }
+                else if (!$type(filePaths) || filePaths.length === 0) {
+                    hasError = 'Empty paths';
+                }
+                else if (!flm.utils.isValidPath(checksumFile)) {
+                    hasError = theUILang.fDiagInvalidname;
+                }
+                if($type(hasError))
+                {
+                    var def = $.Deferred();
+                    def.reject(theUILang.fcSFV +' - ' +hasError, checksumFile);
+                    return def.promise();
+                }
+                //flm.manager.logStart(theUILang.fStarts.sfv_create);
+
+                var cPath = flm.getCurrentPath();
+                return flm.api.sfvCreate(flm.manager.stripHomePath(checksumFile), flm.manager.getFullPaths(filePaths))
+                    .done(function (response) {
+                        flm.Refresh(cPath);
+                        return response;
+                    });
+            });
+
+            var file  = flm.ui.browser.getSelectedEntry();
+
+            file = flm.utils.buildPath([flm.utils.basedir(file), flm.utils.stripFileExtension(file, ext)]);
+
+            var fileName = file+ '.' + ext;
+
+            dialogs.updateTargetPath(diagId, fileName);
+        })
+        (window);
+    </script>
+{% endblock %}
+
